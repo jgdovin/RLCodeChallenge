@@ -47,3 +47,10 @@
     font-size: .8em;
     white-space: pre-wrap;
 }
+
+.social-logo {
+    width: 20px;
+    position: absolute;
+    right: 10px;
+    top: 10px;
+}

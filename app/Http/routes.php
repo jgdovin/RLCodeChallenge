@@ -17,8 +17,9 @@ $app->get('/', function () use ($app) {
 	return redirect("reviews");
 });
 
-$app->get('/reviews[/{noOfReviews}[/{offset}]]', ['as' => 'reviews', function ($noOfReviews=10, $offset=0) use ($app) {
+$app->get('/reviews[/{page}[/{noOfReviews}]]', ['as' => 'reviews', function ($page=1, $noOfReviews=10) use ($app) {
 	$apiKey = isset($_GET['apiKey']) ? $_GET['apiKey'] : env('API_KEY');
+	$offset = ($page - 1) * $noOfReviews;
     $query = array(
     	'apiKey' => $apiKey,
     	'noOfReviews' => $noOfReviews,
@@ -30,6 +31,16 @@ $app->get('/reviews[/{noOfReviews}[/{offset}]]', ['as' => 'reviews', function ($
     );
     $client = new Client();
     $request = $client->request('GET', 'http://test.localfeedbackloop.com/api', ['query' => $query]);
-    // json_decode($request->getBody())
-    return view('reviews', ['company' => json_decode($request->getBody())]);
+    $response = json_decode($request->getBody());
+    //api is returning invalid total_reviews vs how many reviews
+    //are actually there, so this is a temporary work around
+    //send user to page 1 if no results show on current page
+    if(isset($response->responseCode) && $response->responseCode == 1) {
+    	return redirect("reviews");
+    }
+    $paging = new stdClass();
+    $paging->total_reviews = $response->business_info->total_rating->total_no_of_reviews;
+    $paging->total_pages = ceil($paging->total_reviews / $noOfReviews);
+    $paging->current_page = $page;
+    return view('reviews', ['paging' => $paging, 'company' => json_decode($request->getBody())]);
 }]);
